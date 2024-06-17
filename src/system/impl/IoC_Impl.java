@@ -1,10 +1,11 @@
 package system.impl;
 
+import java.util.Optional;
+import java.util.Properties;
+
 import datamodel.Article;
 import datamodel.Customer;
 import datamodel.Order;
-// import datamodel.OrderItem;
-// import datamodel.TAX;
 import system.*;
 
 /**
@@ -31,7 +32,7 @@ public class IoC_Impl implements IoC {
     /**
      * Singleton instance of DataStore component.
      */
-    private final DataStore dataStore;
+    private DataStore dataStore = null;
 
     /**
      * Singleton instance of Calculator component.
@@ -52,17 +53,8 @@ public class IoC_Impl implements IoC {
      * Private constructor to implement Singleton pattern of IoC instance.
      */
     private IoC_Impl() {
-        this.calculator = new CalculatorImpl();
-        this.formatter = new FormatterImpl();
-
-        // prepare depndencies injected into DataStoreImpl
-        var customersRepository = new RepositoryImpl<Customer, Long>(c -> c.getId());
-        var articlesRepository = new RepositoryImpl<Article, String>(a -> a.getId());
-        var ordersRepository = new RepositoryImpl<Order, String>(o -> o.getId());
-        //
-        this.dataStore = new DataStoreImpl(
-                // inject dependencies into DataStoreImpl
-                customersRepository, articlesRepository, ordersRepository);
+        this.calculator = new CalculatorImpl(); // replace mock with own class CalculatorImpl.java
+        this.formatter = new FormatterImpl(); // replace mock with own class FormatterImpl.java
         //
         // inject dependencies into PrinterImpl constructor
         this.printer = new PrinterImpl(calculator, formatter);
@@ -84,6 +76,41 @@ public class IoC_Impl implements IoC {
      */
     @Override
     public DataStore getDataStore() {
+        if (dataStore == null) {
+            Properties properties = application.Runtime.getRuntime().properties();
+            String customersPath = Optional.ofNullable(properties.getProperty("data.customers.file"))
+                    .map(p -> p).orElse("./customers.json");
+            //
+            String articlesPath = Optional.ofNullable(properties.getProperty("data.articles.file"))
+                    .map(p -> p).orElse("./articles.json");
+            //
+            String ordersPath = Optional.ofNullable(properties.getProperty("data.orders.file"))
+                    .map(p -> p).orElse("./orders.json");
+            //
+            DataFactories dataFactories = new DataFactories();
+            JSONDataFactories jsonDataFactories = new JSONDataFactories();
+            //
+            var customersRepository = new JSONRepositoryImpl<Customer, Long>(
+                    jsonDataFactories.JsonCustomerFactory(dataFactories.customerFactory()), customersPath,
+                    c -> c.getId());
+            //
+            var articlesRepository = new JSONRepositoryImpl<Article, String>(
+                    jsonDataFactories.JsonArticleFactory(dataFactories.articleFactory()), articlesPath, a -> a.getId());
+            //
+            var ordersRepository = new JSONRepositoryImpl<Order, String>(
+                    jsonDataFactories.JsonOrderFactory(dataFactories.orderFactory(), customersRepository,
+                            articlesRepository),
+                    ordersPath, o -> o.getId());
+            //
+            DataStoreImpl dataStoreImpl = new DataStoreImpl(dataFactories,
+                    customersRepository, articlesRepository, ordersRepository);
+            //
+            customersRepository.load();
+            articlesRepository.load();
+            ordersRepository.load();
+            //
+            this.dataStore = dataStoreImpl;
+        }
         return dataStore;
     }
 

@@ -17,4 +17,5 @@ module se1.bestellsystem {
 
     requires org.junit.jupiter.api; // JUnit-5 test module
     requires java.logging; // JUL logging module
+    requires com.fasterxml.jackson.databind; // Json libraries
 }
