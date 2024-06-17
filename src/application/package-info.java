@@ -7,12 +7,11 @@
  */
 package application;
 
-
 /**
  * Special class that provides package-level Java documentation and
  * common definitions used in Javadocs.
  */
 class package_info {
     static final String Author = "sgraupner";
-    static final String Version = "1.0.0-SNAPSHOT-D12-Datamodel";
+    static final String Version = "1.0.0-SNAPSHOT-GX";
 }
